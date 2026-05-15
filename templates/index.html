@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detection in Music Lyrics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        :root {
+            --bg: #0b1220;
+            --panel: #111827;
+            --panel-alt: #0f172a;
+            --border: #1f2937;
+            --muted: #94a3b8;
+            --text: #e5e7eb;
+            --accent: #8b5cf6;
+            --accent-2: #6366f1;
+            --accent-3: #22d3ee;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at 20% 20%, rgba(99,102,241,0.12), transparent 35%),
+                        radial-gradient(circle at 80% 10%, rgba(34,211,238,0.12), transparent 30%),
+                        radial-gradient(circle at 50% 80%, rgba(139,92,246,0.12), transparent 35%),
+                        var(--bg);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: var(--text);
+            margin-bottom: 32px;
+        }
+
+        header h1 {
+            font-size: 2.4em;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        header p {
+            font-size: 1.05em;
+            opacity: 0.8;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(17,24,39,0.95), rgba(15,23,42,0.92));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(99,102,241,0.5);
+            box-shadow: 0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(99,102,241,0.12);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.95em;
+        }
+
+        textarea, input[type="url"] {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.95em;
+            font-family: inherit;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+            background: rgba(255,255,255,0.02);
+            color: var(--text);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 200px;
+        }
+
+        textarea:focus, input[type="text"]:focus, input[type="url"]:focus {
+            outline: none;
+            border-color: var(--accent-2);
+            background-color: rgba(255,255,255,0.04);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
+        }
+
+        textarea::placeholder, input[type="text"]::placeholder, input[type="url"]::placeholder {
+            color: var(--muted);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(120deg, var(--accent-2), var(--accent));
+            color: white;
+            flex: 1;
+            box-shadow: 0 10px 30px rgba(99,102,241,0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 12px 36px rgba(139,92,246,0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.32);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.04);
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.08);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.08);
+            border-top: 4px solid var(--accent-2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background-color: rgba(239,68,68,0.12);
+            border: 1px solid rgba(239,68,68,0.45);
+            color: #fecdd3;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success {
+            background-color: rgba(34,197,94,0.12);
+            border: 1px solid rgba(34,197,94,0.45);
+            color: #bbf7d0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .emotion-display {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.25));
+            border-radius: 16px;
+            color: var(--text);
+            border: 1px solid rgba(99,102,241,0.35);
+        }
+
+        .emotion-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .emotion-name {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .confidence {
+            font-size: 1.5em;
+            opacity: 0.95;
+        }
+
+        .emotion-summary {
+            margin-top: 12px;
+            color: var(--text);
+            opacity: 0.9;
+            line-height: 1.4;
+            background: rgba(0,0,0,0.18);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 30px;
+        }
+
+        .scores-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .scores-table th {
+            background: rgba(255,255,255,0.04);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .scores-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .scores-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .score-bar {
+            width: 100%;
+            height: 25px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-2), var(--accent));
+            transition: width 0.5s ease;
+        }
+
+        .score-label {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85em;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .recommendations {
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid var(--accent);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .recommendations h3 {
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .song-item {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .song-item:last-child {
+            border-bottom: none;
+        }
+
+        .song-title {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .song-artist {
+            color: var(--muted);
+            font-size: 0.9em;
+        }
+
+        .matched-words {
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .matched-words h4 {
+            margin-bottom: 10px;
+            color: var(--text);
+        }
+
+        .word-tag {
+            display: inline-block;
+            background: linear-gradient(120deg, var(--accent-2), var(--accent));
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            margin: 3px;
+            font-size: 0.85em;
+        }
+
+
+        .line-analysis {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .line-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .line-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .line-head-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .line-text {
+            color: var(--text);
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+        }
+
+        .line-meaning {
+            color: var(--muted);
+            font-size: 0.92em;
+        }
+
+        .line-scores {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .badge-love {
+            background: linear-gradient(135deg, #ec4899, #f97316);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .emotion-name {
+                font-size: 2em;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
+        .info-section {
+            background: rgba(255,255,255,0.03);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            color: var(--muted);
+            line-height: 1.6;
+            border: 1px solid var(--border);
+        }
+
+        .info-section strong {
+            color: var(--text);
+        }
+
+        .genius-section {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+        }
+
+        .genius-section h3 {
+            margin-bottom: 8px;
+        }
+
+        .genius-status {
+            color: var(--muted);
+            font-size: 0.95em;
+        }
+
+        .link-pill {
+            display: inline-block;
+            padding: 8px 12px;
+            background: linear-gradient(120deg, var(--accent-2), var(--accent));
+            color: white;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Emotion Detection in Music Lyrics</h1>
+            <p>Analyze song lyrics using AI to detect emotions</p>
+            <a href="{{ url_for('logout') }}" style="color:white; text-decoration:none; margin-top:10px; display:inline-block;">
+        (Logout)
+    </a>
+        </header>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2>📝 Paste Your Lyrics</h2>
+                
+                <div class="info-section">
+                    <strong>How it works:</strong> Paste song lyrics (we won't store them). Optionally provide a YouTube/Spotify link to keep with your analysis—no external lyric lookup.
+                </div>
+
+                <div class="error" id="errorMsg"></div>
+                <div class="success" id="successMsg"></div>
+
+                <div class="form-group">
+                    <label for="sourceUrl">YouTube/Spotify Link (optional)</label>
+                    <input
+                        type="url"
+                        id="sourceUrl"
+                        placeholder="https://open.spotify.com/track/..."
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="lyricsInput">Song Lyrics:</label>
+                    <textarea 
+                        id="lyricsInput" 
+                        placeholder="Paste your song lyrics here... (minimum 100 characters)"
+                    ></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" id="analyzeBtn" onclick="analyzeLyrics()">
+                        Analyze Emotions
+                    </button>
+                    <button class="btn-secondary" id="clearBtn" onclick="clearForm()">
+                        Clear
+                    </button>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing lyrics...</p>
+                </div>
+            </div>
+
+            <div class="card results" id="resultsCard">
+                <h2>📊 Analysis Results</h2>
+
+                <div class="info-section" id="fetchStatus" style="display:none;"></div>
+                <div class="emotion-summary" id="overallTone" style="display:none;"></div>
+                <div class="emotion-summary" id="emotionBreakdown" style="display:none;"></div>
+
+                <div class="emotion-display" id="moodDisplay" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                    <div class="emotion-label">Detected Mood</div>
+                    <div class="emotion-name" id="moodName">—</div>
+                    <div class="confidence" id="moodConfidence">—</div>
+                    <div class="emotion-summary" id="moodDescription" style="margin-top:8px; display:none;"></div>
+                    <div class="emotion-summary" id="moodTip" style="margin-top:8px; color: #c7d2fe; display:none;"></div>
+                    <div class="emotion-summary" id="moodLowConfidence" style="margin-top:8px; color: #fbbf24; display:none;"></div>
+                </div>
+
+                <div class="emotion-display" id="emotionDisplay">
+                    <div class="emotion-label">Detected Emotion</div>
+                    <div class="emotion-name" id="primaryEmotion">—</div>
+                    <div class="confidence" id="confidenceScore">—</div>
+                </div>
+
+                <div class="emotion-summary" id="emotionDescription" style="display:none;"></div>
+
+                <div class="chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+
+                <div class="genius-section" id="linkSection" style="display: none;">
+                    <h3>🔗 Provided Link</h3>
+                    <div id="linkBody" class="genius-status"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card results" id="detailsCard" style="display: none;">
+            <h2>📈 Detailed Analysis</h2>
+
+            <div class="matched-words" id="matchedWordsSection" style="display: none;">
+                <h4>🔍 Emotion Keywords Detected:</h4>
+                <div id="matchedWordsList"></div>
+            </div>
+            <div class="matched-words" id="keyPhrasesSection" style="display: none;">
+                <h4>✨ Key Emotional Phrases:</h4>
+                <div id="keyPhrasesList"></div>
+            </div>
+
+            <h3 style="margin-bottom: 15px;">All Emotion Scores:</h3>
+            <table class="scores-table">
+                <thead>
+                    <tr>
+                        <th>Emotion</th>
+                        <th>Score</th>
+                        <th>Meaning</th>
+                        <th>Distribution</th>
+                    </tr>
+                </thead>
+                <tbody id="scoresTableBody">
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #999;">No data</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="recommendations" id="recommendationsSection" style="display: none;">
+                <h3>🎧 Recommended Songs (Similar Mood):</h3>
+                <div id="recommendationsList"></div>
+            </div>
+            <div class="info-section" id="recentSection" style="display:none; margin-top:12px;">
+                <!-- Moved to standalone card -->
+            </div>
+        </div>
+
+        <!-- Recent Analyses Section -->
+        <div class="card" id="recentAnalysesCard" style="margin-top: 30px; display: none;">
+            <h2>🕒 Recent Analyses</h2>
+            <div id="recentList"></div>
+        </div>
+
+        
+    </div>
+
+    <script>
+        let emotionChart = null;
+        if (window.Chart && Chart.defaults) {
+            Chart.defaults.color = '#e5e7eb';
+            Chart.defaults.borderColor = '#1f2937';
+        }
+        function topEmotionFrom(emotions) {
+            const entries = Object.entries(emotions || {});
+            if (entries.length === 0) return '';
+            entries.sort((a, b) => (parseFloat(b[1]) || 0) - (parseFloat(a[1]) || 0));
+            return entries[0][0];
+        }
+
+        const EMOTION_MEANINGS = {
+            joy: 'Warmth, positivity, uplift, often tied to love.',
+            sadness: 'Somber, reflective, sense of loss or longing.',
+            anger: 'Tension, frustration, conflict and pushback.',
+            fear: 'Anxious or uneasy, watching for what could go wrong.',
+            trust: 'Steady, loyal, reassuring and supportive.',
+            disgust: 'Aversion or rejection of what feels wrong.',
+            surprise: 'Unexpected shifts, twists, or jolts.',
+            anticipation: 'Forward-looking, excited for what is next.',
+            love: 'Affectionate, romantic, and connection-focused.',
+            motivation: 'Drive, ambition, and forward-moving energy.'
+        };
+
+        async function analyzeLyrics() {
+            const lyrics = document.getElementById('lyricsInput').value.trim();
+            const sourceUrl = document.getElementById('sourceUrl').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            const loading = document.getElementById('loading');
+            const resultsCard = document.getElementById('resultsCard');
+            const detailsCard = document.getElementById('detailsCard');
+
+            // Clear messages
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+
+            // Validation: allow link-only submissions; enforce length on pasted lyrics
+            if (!lyrics && !sourceUrl) {
+                errorMsg.textContent = 'Please paste lyrics or provide a song link.';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            if (lyrics && !sourceUrl && lyrics.length < 100) {
+                errorMsg.textContent = 'Please provide at least 100 characters of lyrics.';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            loading.style.display = 'block';
+            resultsCard.style.display = 'none';
+            detailsCard.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ lyrics, source_url: sourceUrl })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Analysis failed');
+                }
+
+                const data = await response.json();
+
+                if (data.status !== 'success') {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+
+                // Display results
+                displayResults(data);
+                resultsCard.style.display = 'block';
+                detailsCard.style.display = 'block';
+
+                successMsg.textContent = 'Analysis complete!';
+                successMsg.style.display = 'block';
+
+            } catch (error) {
+                errorMsg.textContent = 'Error: ' + error.message;
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const emotionsMap = data.all_emotions || {};
+            const primaryKey = (data.primary_emotion && data.primary_emotion.length)
+                ? data.primary_emotion
+                : topEmotionFrom(emotionsMap);
+            const emotion = primaryKey ? (primaryKey.charAt(0).toUpperCase() + primaryKey.slice(1)) : 'Unknown';
+            const confidence = (() => {
+                const v = primaryKey && emotionsMap[primaryKey] != null ? emotionsMap[primaryKey] : data.confidence;
+                return ((parseFloat(v) || 0) * 100).toFixed(1);
+            })();
+            const descriptionEl = document.getElementById('emotionDescription');
+            const overallToneEl = document.getElementById('overallTone');
+            const breakdownEl = document.getElementById('emotionBreakdown');
+            const fetchStatus = document.getElementById('fetchStatus');
+            const moodNameEl = document.getElementById('moodName');
+            const moodConfEl = document.getElementById('moodConfidence');
+            const moodDescEl = document.getElementById('moodDescription');
+            const moodTipEl = document.getElementById('moodTip');
+            const moodLowEl = document.getElementById('moodLowConfidence');
+            const moodDisplay = document.getElementById('moodDisplay');
+
+            if (fetchStatus) {
+                if (data.fetched_from_link) {
+                    let msg = 'Lyrics fetched from link.';
+                    if (data.fetched_partial) {
+                        msg = data.fetch_note || 'Fetched partial text from link; lyrics may be incomplete.';
+                    } else if (data.fetch_note) {
+                        msg = data.fetch_note;
+                    }
+                    fetchStatus.textContent = msg;
+                    fetchStatus.style.display = 'block';
+                } else {
+                    fetchStatus.style.display = 'none';
+                    fetchStatus.textContent = '';
+                }
+            }
+
+            if (overallToneEl) {
+                const tone = data.tone_summary || data.overall_tone;
+                if (tone) {
+                    overallToneEl.textContent = tone;
+                    overallToneEl.style.display = 'block';
+                } else {
+                    overallToneEl.style.display = 'none';
+                }
+            }
+
+            if (breakdownEl) {
+                const breakdown = data.emotion_breakdown;
+                if (Array.isArray(breakdown) && breakdown.length) {
+                    renderEmotionBreakdown(breakdown);
+                    breakdownEl.style.display = 'block';
+                } else {
+                    breakdownEl.style.display = 'none';
+                    breakdownEl.innerHTML = '';
+                }
+            }
+
+            const moodLabel = (data.mood ? (data.mood.charAt(0).toUpperCase() + data.mood.slice(1)) : emotion);
+            const moodConfPct = (data.mood_confidence != null ? (parseFloat(data.mood_confidence) * 100).toFixed(1) : confidence);
+            const moodColors = {
+                'Love': '#FF1493',
+                'Joy': '#FFD700',
+                'Sadness': '#4169E1',
+                'Anger': '#FF6347',
+                'Fear': '#8B008B',
+                'Trust': '#32CD32',
+                'Disgust': '#9370DB',
+                'Surprise': '#FF8C00',
+                'Anticipation': '#20B2AA',
+            'Motivated': '#00CED1',
+            };
+
+            moodNameEl.textContent = moodLabel;
+            moodConfEl.textContent = `Confidence: ${moodConfPct}%`;
+            moodDisplay.style.background = moodColors[moodLabel] || '#4b5563';
+
+            if (data.mood_description) {
+                moodDescEl.textContent = data.mood_description;
+                moodDescEl.style.display = 'block';
+            } else {
+                moodDescEl.style.display = 'none';
+            }
+
+            // Show mood-specific keywords
+            if (data.mood_keywords && data.mood_keywords.length) {
+                const uniq = Array.from(new Set(data.mood_keywords));
+                moodTipEl.textContent = 'Keywords: ' + uniq.join(', ');
+                moodTipEl.style.display = 'block';
+            } else {
+                moodTipEl.style.display = 'none';
+            }
+            moodLowEl.style.display = 'none';
+
+            // Update main emotion display
+            document.getElementById('primaryEmotion').textContent = emotion;
+            document.getElementById('confidenceScore').textContent = 
+                `Confidence: ${confidence}%`;
+
+            if (data.description) {
+                descriptionEl.textContent = data.description;
+                descriptionEl.style.display = 'block';
+            } else {
+                descriptionEl.style.display = 'none';
+            }
+
+            // Note if lyrics were fetched from the link
+            if (data.fetched_from_link && successMsg) {
+                successMsg.textContent = 'Lyrics fetched from link and analyzed.';
+                successMsg.style.display = 'block';
+            }
+
+            // Update emotion display color
+            const colors = {
+                'Joy': '#FFD700',
+                'Sadness': '#4169E1',
+                'Anger': '#FF6347',
+                'Fear': '#8B008B',
+                'Trust': '#32CD32',
+                'Disgust': '#9370DB',
+                'Surprise': '#FF8C00',
+                'Anticipation': '#20B2AA',
+                'Love': '#FF1493',
+            'Motivation': '#00CED1'
+            };
+            
+            const emotionDisplay = document.getElementById('emotionDisplay');
+            emotionDisplay.style.background = colors[emotion] || '#667eea';
+
+            // Create chart
+            updateChart(emotionsMap);
+
+            // Update scores table
+            updateScoresTable(emotionsMap);
+
+            // Update matched words
+            if (data.matched_words && data.matched_words.length > 0) {
+                updateMatchedWords(data.matched_words);
+                document.getElementById('matchedWordsSection').style.display = 'block';
+            } else {
+                document.getElementById('matchedWordsSection').style.display = 'none';
+            }
+
+            // Key phrases
+            if (data.key_phrases && data.key_phrases.length > 0) {
+                updateKeyPhrases(data.key_phrases);
+                document.getElementById('keyPhrasesSection').style.display = 'block';
+            } else {
+                document.getElementById('keyPhrasesSection').style.display = 'none';
+            }
+
+            // Update recommendations
+            if (data.recommendations && data.recommendations.length > 0) {
+                updateRecommendations(data.recommendations);
+                document.getElementById('recommendationsSection').style.display = 'block';
+            } else {
+                document.getElementById('recommendationsSection').style.display = 'none';
+            }
+
+            // Recent analyses
+            refreshRecentAnalyses();
+
+            // Show provided link if present
+            updateLink(data.source_url);
+
+        }
+
+        function updateChart(emotions) {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            const filtered = Object.entries(emotions || {}).filter(([_, v]) => (parseFloat(v) || 0) > 0);
+            if (!filtered.length) {
+                if (emotionChart) emotionChart.destroy();
+                return;
+            }
+            const emotionLabels = filtered.map(([e]) => e.charAt(0).toUpperCase() + e.slice(1));
+            const emotionValues = filtered.map(([_, v]) => ((parseFloat(v) || 0) * 100).toFixed(1));
+
+            const colors = ['#FFD700', '#4169E1', '#FF6347', '#8B008B', 
+                          '#32CD32', '#9370DB', '#FF8C00', '#20B2AA', '#FF1493'];
+
+            if (emotionChart) {
+                emotionChart.destroy();
+            }
+
+            emotionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: emotionLabels,
+                    datasets: [{
+                        data: emotionValues,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: 'white'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 12 },
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateScoresTable(emotions) {
+            const tbody = document.getElementById('scoresTableBody');
+            tbody.innerHTML = '';
+
+            const sorted = Object.entries(emotions || {})
+                .filter(([_, v]) => v > 0)
+                .sort((a, b) => b[1] - a[1]);
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">No emotion scores available.</td></tr>`;
+                return;
+            }
+
+            sorted.forEach(([emotion, score]) => {
+                const percentage = (score * 100).toFixed(1);
+                const meaning = EMOTION_MEANINGS[emotion] || 'Distinct emotional tone.';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${emotion.charAt(0).toUpperCase() + emotion.slice(1)}</strong></td>
+                    <td>${percentage}%</td>
+                    <td style="color: var(--muted); font-size: 0.92em;">${meaning}</td>
+                    <td>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: ${percentage}%"></div>
+                            <div class="score-label">${percentage}%</div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function refreshRecentAnalyses() {
+            try {
+                const res = await fetch('/api/analyses');
+                if (!res.ok) throw new Error('Failed to load recent analyses');
+                const payload = await res.json();
+                updateRecentAnalyses(payload.items || []);
+                document.getElementById('recentAnalysesCard').style.display = (payload.items || []).length ? 'block' : 'none';
+            } catch (_) {
+                document.getElementById('recentAnalysesCard').style.display = 'none';
+            }
+        }
+
+        async function deleteAnalysis(id) {
+            try {
+                const res = await fetch(`/api/analyses/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Delete failed');
+                refreshRecentAnalyses();
+            } catch (e) {
+                // silent fail for now
+            }
+        }
+
+        async function viewAnalysis(id) {
+            try {
+                const loading = document.getElementById('loading');
+                loading.style.display = 'block';
+                document.getElementById('resultsCard').style.display = 'none';
+                document.getElementById('detailsCard').style.display = 'none';
+
+                const res = await fetch(`/api/analyses/${id}`);
+                if (!res.ok) throw new Error('Failed to load analysis');
+                const payload = await res.json();
+                
+                if (payload.status === 'success' && payload.item) {
+                     const item = payload.item;
+                     document.getElementById('lyricsInput').value = item.lyrics || '';
+                     
+                     // Adapt for displayResults
+                     const data = {
+                         ...item,
+                         confidence: item.emotion_confidence,
+                         mood: item.primary_mood,
+                         mood_confidence: item.mood_confidence,
+                         tone_summary: item.overall_tone,
+                         matched_words: item.emotion_keywords,
+                         // Ensure all_emotions is present (we added it in backend)
+                     };
+                     
+                     displayResults(data);
+                     
+                     document.getElementById('resultsCard').style.display = 'block';
+                     document.getElementById('detailsCard').style.display = 'block';
+                     
+                     // Scroll to results
+                     document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Could not load analysis details');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function updateRecentAnalyses(items) {
+            const list = document.getElementById('recentList');
+            list.innerHTML = (items || []).map(it => {
+                const name = (it.primary_emotion || 'unknown').toString().charAt(0).toUpperCase() + (it.primary_emotion || 'unknown').toString().slice(1);
+                const confVal = it.emotion_confidence != null ? it.emotion_confidence : (it.confidence || 0);
+                const conf = ((parseFloat(confVal) || 0) * 100).toFixed(1);
+                
+                const tone = it.overall_tone || it.tone_summary || '';
+                const when = it.created_at || '';
+                const snippet = it.lyrics_snippet ? (it.lyrics_snippet + '...') : '';
+                
+                return `<div class="line-item">
+                    <div class="line-head">
+                        <div>${when}</div>
+                        <div class="line-head-tags">
+                            <div style="background:#667eea; padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.8em;">${name} · ${conf}%</div>
+                            <button style="background:#3b82f6; padding: 4px 8px; border-radius: 4px; color: white; border:none; cursor:pointer; font-size: 0.8em;" onclick="viewAnalysis(${it.id})">View</button>
+                            <button style="background:#ef4444; padding: 4px 8px; border-radius: 4px; color: white; border:none; cursor:pointer; font-size: 0.8em;" onclick="deleteAnalysis(${it.id})">Delete</button>
+                        </div>
+                    </div>
+                    ${tone ? `<div class="line-meaning">${tone}</div>` : ''}
+                    ${snippet ? `<div class="line-text" style="font-size:0.9em; opacity:0.8;">${snippet}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        window.addEventListener('load', () => {
+            refreshRecentAnalyses();
+        });
+        function renderEmotionBreakdown(items) {
+            const el = document.getElementById('emotionBreakdown');
+            el.innerHTML = items.map(it => {
+                const label = it.emotion ? (it.emotion.charAt(0).toUpperCase() + it.emotion.slice(1)) : 'Emotion';
+                const level = it.level || 'Subtle';
+                const kws = (it.keywords || []).join(', ');
+                const pct = ((parseFloat(it.score) || 0) * 100).toFixed(1);
+                return `<div style="margin-bottom:8px;">
+                    <strong>${label}</strong> · ${level} · ${pct}%
+                    ${kws ? `<div style="color: var(--muted);">Keywords: ${kws}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function updateMatchedWords(words) {
+            const list = document.getElementById('matchedWordsList');
+            const uniq = Array.from(new Set(words || []));
+            list.innerHTML = uniq
+                .map(word => `<span class="word-tag">${word}</span>`)
+                .join('');
+        }
+
+        function updateKeyPhrases(phrases) {
+            const list = document.getElementById('keyPhrasesList');
+            const uniq = Array.from(new Set(phrases || []));
+            list.innerHTML = uniq
+                .map(text => `<div class="word-tag" style="display:block; text-align:left;">${text}</div>`)
+                .join('');
+        }
+
+        function updateRecommendations(recommendations) {
+            const list = document.getElementById('recommendationsList');
+            list.innerHTML = recommendations
+                .map(song => {
+                    const query = encodeURIComponent(`${song.song} ${song.artist}`);
+                    const ytUrl = `https://www.youtube.com/results?search_query=${query}`;
+                    const spUrl = `https://open.spotify.com/search/${query}`;
+                    return `
+                        <div class="song-item">
+                            <div class="song-title">♫ ${song.song}</div>
+                            <div class="song-artist">by ${song.artist}</div>
+                            <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+                                <a class="link-pill" href="${ytUrl}" target="_blank" rel="noopener noreferrer">YouTube</a>
+                                <a class="link-pill" href="${spUrl}" target="_blank" rel="noopener noreferrer">Spotify</a>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+        }
+
+
+        function updateLink(url) {
+            const section = document.getElementById('linkSection');
+            const body = document.getElementById('linkBody');
+
+            if (!url) {
+                section.style.display = 'none';
+                body.textContent = '';
+                return;
+            }
+
+            section.style.display = 'block';
+            body.innerHTML = '';
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'link-pill';
+            link.textContent = 'Open provided link';
+            body.appendChild(link);
+        }
+
+        
+
+        function clearForm() {
+            document.getElementById('lyricsInput').value = '';
+            document.getElementById('resultsCard').style.display = 'none';
+            document.getElementById('detailsCard').style.display = 'none';
+            document.getElementById('linkSection').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('successMsg').style.display = 'none';
+            document.getElementById('lyricsInput').focus();
+        }
+
+        // Test with sample lyrics on page load
+        function loadSampleLyrics() {
+            const sample = `I can't help falling in love with you
+For it's clear to see you were meant for me
+Yes, I'll share this love with you
+Yeah, I will
+If you extend your hand towards me
+And take me into your heart
+I'll be a man that's true to you
+All the days of my life`;
+            document.getElementById('lyricsInput').value = sample;
+        }
+
+        // Allow Enter key to submit
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('lyricsInput').addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    analyzeLyrics();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

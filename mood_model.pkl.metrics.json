@@ -1,0 +1,187 @@
+{
+  "name": "Mood",
+  "test_accuracy": 0.9069767441860465,
+  "cv_mean": 0.9647058823529413,
+  "cv_std": 0.028817526385684456,
+  "labels": [
+    "angry",
+    "anxious",
+    "calm",
+    "energetic",
+    "happy",
+    "motivated",
+    "relaxed",
+    "romantic",
+    "sad"
+  ],
+  "classification_report": {
+    "angry": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4.0
+    },
+    "anxious": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4.0
+    },
+    "calm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4.0
+    },
+    "energetic": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4.0
+    },
+    "happy": {
+      "precision": 0.5714285714285714,
+      "recall": 1.0,
+      "f1-score": 0.7272727272727273,
+      "support": 4.0
+    },
+    "motivated": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 2.0
+    },
+    "relaxed": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4.0
+    },
+    "romantic": {
+      "precision": 0.9285714285714286,
+      "recall": 1.0,
+      "f1-score": 0.962962962962963,
+      "support": 13.0
+    },
+    "sad": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 4.0
+    },
+    "accuracy": 0.9069767441860465,
+    "macro avg": {
+      "precision": 0.8333333333333334,
+      "recall": 0.8888888888888888,
+      "f1-score": 0.85447063224841,
+      "support": 43.0
+    },
+    "weighted avg": {
+      "precision": 0.8455149501661129,
+      "recall": 0.9069767441860465,
+      "f1-score": 0.8704095215723122,
+      "support": 43.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      4,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      13,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      3,
+      0,
+      0,
+      1,
+      0
+    ]
+  ]
+}
