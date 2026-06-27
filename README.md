@@ -304,10 +304,6 @@ CREATE TABLE analyses (
 
 This project is open source and available for educational purposes.
 
-## 👥 Authors
-
-- AI Assistant - Initial development and architecture
-
 ## 🙏 Acknowledgments
 
 - **NRC Emotion Lexicon** - Emotion word associations
